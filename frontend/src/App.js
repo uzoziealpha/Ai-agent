@@ -53,50 +53,68 @@ const options = {
 const MetricsDashboard = () => {
   return (
     <div className="metrics-section">
-      <h2>AI Performance Metrics</h2>
+      <h2>AI Customer Service Metrics</h2>
       <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4">
         <Col>
           <Card className="metric-card">
             <Card.Body>
-              <h5>Emails Sent</h5>
-              <p>12,361</p>
-              <p className="metric-change positive">+2%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Sales Obtained</h5>
-              <p>431,225</p>
-              <p className="metric-change positive">+21%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>New Subscribers</h5>
-              <p>3,452</p>
-              <p className="metric-change negative">-5%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Website Traffic</h5>
-              <p>1,236,876</p>
-              <p className="metric-change positive">+15%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Orders Processed</h5>
-              <p>57,890</p>
+              <h5>Tickets Resolved</h5>
+              <p>5,328</p>
               <p className="metric-change positive">+8%</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col>
+          <Card className="metric-card">
+            <Card.Body>
+              <h5>Response Time (ms)</h5>
+              <p>130</p>
+              <p className="metric-change positive">-12%</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col>
+          <Card className="metric-card">
+            <Card.Body>
+              <h5>Customer Satisfaction</h5>
+              <p>89%</p>
+              <p className="metric-change positive">+5%</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col>
+          <Card className="metric-card">
+            <Card.Body>
+              <h5>AI Utilization Rate</h5>
+              <p>92%</p>
+              <p className="metric-change positive">+4%</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col>
+          <Card className="metric-card">
+            <Card.Body>
+              <h5>Average Handle Time (sec)</h5>
+              <p>45</p>
+              <p className="metric-change negative">-3%</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col>
+          <Card className="metric-card">
+            <Card.Body>
+              <h5>Customer Feedback Score</h5>
+              <p>4.7/5</p>
+              <p className="metric-change positive">+0.1</p>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col>
+          <Card className="metric-card">
+            <Card.Body>
+              <h5>Tickets Unresolved (Human Intervention Needed)</h5>
+              <p>124</p>
+              <p className="metric-change negative">+5%</p>
             </Card.Body>
           </Card>
         </Col>
@@ -165,7 +183,7 @@ function App() {
       </div>
 
       {/* Main Content Area */}
-      <div className="main-content">
+      <div className={`main-content ${sidebarOpen ? 'shifted' : ''}`}>
         <Button className="sidebar-toggle-btn" onClick={toggleSidebar}>
           <BsList size={30} />
         </Button>
