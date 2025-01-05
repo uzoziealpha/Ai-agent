@@ -19,7 +19,7 @@ def chat():
         response = requests.post(
             'https://api.deepseek.com/v1/chat/completions',  # Correct DeepSeek API endpoint
             headers={
-                'Authorization': 'Bearer sk-7df095967fcd40fb9942443e2d9fadce',  # Use your actual DeepSeek API key
+                'Authorization': 'Bearer ',  # Use your actual DeepSeek API key
                 'Content-Type': 'application/json',
             },
             json={
