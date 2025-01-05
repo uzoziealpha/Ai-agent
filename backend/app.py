@@ -4,6 +4,8 @@ from flask_socketio import SocketIO, send
 import requests
 import os
 from werkzeug.utils import secure_filename
+import PyPDF2
+from docx import Document
 
 # Initialize Flask app and enable CORS
 app = Flask(__name__)
@@ -16,11 +18,28 @@ app.config['ALLOWED_EXTENSIONS'] = {'txt', 'pdf', 'docx', 'xlsx'}  # Allowed fil
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max file size 16MB
 
 # DeepSeek API Key - Replace with your actual API key
-DEEPSEEK_API_KEY = ''
+DEEPSEEK_API_KEY = 'sk-7df095967fcd40fb9942443e2d9fadce'
 
 # Helper function to check allowed file extensions
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+# Helper function to extract text from PDF
+def extract_text_from_pdf(file_path):
+    with open(file_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+    return text
+
+# Helper function to extract text from DOCX
+def extract_text_from_docx(file_path):
+    doc = Document(file_path)
+    text = ""
+    for para in doc.paragraphs:
+        text += para.text + "\n"
+    return text
 
 # Endpoint for DeepSeek API interaction
 @app.route('/api/chat', methods=['POST'])
@@ -80,13 +99,22 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Optionally, process the file here (e.g., extract text or summarize)
+        # Extract text based on file type
+        extracted_text = ""
+        if filename.endswith('.pdf'):
+            extracted_text = extract_text_from_pdf(file_path)
+        elif filename.endswith('.docx'):
+            extracted_text = extract_text_from_docx(file_path)
 
-        # Return success response
+        # Check if text extraction was successful
+        if not extracted_text:
+            return jsonify({'error': 'Unable to extract text from the file'}), 400
+
+        # Optionally, send the extracted text for summarization or further processing
         return jsonify({
             'success': True,
-            'message': 'File uploaded successfully!',
-            'file_path': file_path
+            'message': 'File uploaded and processed successfully!',
+            'extracted_text': extracted_text[:500]  # Preview the first 500 characters
         })
 
     except Exception as e:

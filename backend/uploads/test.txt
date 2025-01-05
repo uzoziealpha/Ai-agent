@@ -1,0 +1,3 @@
+This is a test file for summarization.
+It contains multiple lines to check text extraction.
+The file will be uploaded for processing.

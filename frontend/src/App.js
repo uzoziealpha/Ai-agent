@@ -115,7 +115,7 @@ function App() {
           message: "File uploaded and processed successfully!",
           variant: "success",
         });
-        setExtractedData(data.extractedText || "No extraction result available.");
+        setExtractedData(data.extracted_text || "No extraction result available.");
       } else {
         setUploadResponse({
           message: 'Error: Could not process the file.',
