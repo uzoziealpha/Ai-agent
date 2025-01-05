@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container, Row, Col, Card, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, ProgressBar, Form, Alert } from 'react-bootstrap';
 import { BsList } from 'react-icons/bs';
-import Sidebar from './components/Sidebar';  // Correct import of Sidebar
+import Sidebar from './components/Sidebar';
+import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -18,134 +19,59 @@ import {
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-// Example data for performance metrics
-const performanceData = {
-  labels: ['0s', '1s', '2s', '3s', '4s', '5s'],
+// Example data for LLM performance metrics
+const performanceMetrics = {
+  labels: ['10:00', '10:05', '10:10', '10:15', '10:20'],
   datasets: [
     {
       label: 'Response Time (ms)',
-      data: [120, 150, 180, 210, 170, 140],
+      data: [120, 150, 110, 180, 140],
       borderColor: 'rgba(75, 192, 192, 1)',
       backgroundColor: 'rgba(75, 192, 192, 0.2)',
-      fill: true,
       tension: 0.4,
+      fill: true,
+    },
+    {
+      label: 'Token Usage (per request)',
+      data: [300, 400, 350, 500, 450],
+      borderColor: 'rgba(255, 99, 132, 1)',
+      backgroundColor: 'rgba(255, 99, 132, 0.2)',
+      tension: 0.4,
+      fill: true,
     },
   ],
 };
 
-const options = {
+// Chart options
+const chartOptions = {
   responsive: true,
   plugins: {
     legend: { position: 'top' },
-    title: { display: true, text: 'Performance Metrics (Response Time)' },
+    title: { display: true, text: 'LLM Performance Metrics' },
   },
   scales: {
-    x: { title: { display: true, text: 'Time (seconds)' } },
-    y: {
-      title: { display: true, text: 'Response Time (ms)' },
-      min: 0,
-      max: 250,
-    },
+    x: { title: { display: true, text: 'Time' } },
+    y: { title: { display: true, text: 'Values' }, min: 0, max: 600 },
   },
-};
-
-// Metrics Dashboard Component
-const MetricsDashboard = () => {
-  return (
-    <div className="metrics-section">
-      <h2>AI Customer Service Metrics</h2>
-      <Row xs={1} sm={2} md={3} lg={4} xl={5} className="g-4">
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Tickets Resolved</h5>
-              <p>5,328</p>
-              <p className="metric-change positive">+8%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Response Time (ms)</h5>
-              <p>130</p>
-              <p className="metric-change positive">-12%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Customer Satisfaction</h5>
-              <p>89%</p>
-              <p className="metric-change positive">+5%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>AI Utilization Rate</h5>
-              <p>92%</p>
-              <p className="metric-change positive">+4%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Average Handle Time (sec)</h5>
-              <p>45</p>
-              <p className="metric-change negative">-3%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Customer Feedback Score</h5>
-              <p>4.7/5</p>
-              <p className="metric-change positive">+0.1</p>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col>
-          <Card className="metric-card">
-            <Card.Body>
-              <h5>Tickets Unresolved (Human Intervention Needed)</h5>
-              <p>124</p>
-              <p className="metric-change negative">+5%</p>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </div>
-  );
 };
 
 // Main App Component
 function App() {
   const [message, setMessage] = useState('');
   const [response, setResponse] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);  // State for sidebar toggle
+  const [interpretation, setInterpretation] = useState({ sentiment: '', keywords: [] });
+  const [file, setFile] = useState(null);
+  const [task, setTask] = useState('summarization'); // Default task
+  const [uploadResponse, setUploadResponse] = useState('');
+  const [extractedData, setExtractedData] = useState('');
 
-  const recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognitionInstance = recognition ? new recognition() : null;
+  const handleInputChange = (e) => setMessage(e.target.value);
 
-  const handleInputChange = (e) => {
-    setMessage(e.target.value);
-  };
+  const handleFileChange = (e) => setFile(e.target.files[0]);
 
-  const startListening = () => {
-    if (recognitionInstance) {
-      recognitionInstance.start();
-      recognitionInstance.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setMessage(transcript);
-      };
-    }
-  };
+  const handleTaskChange = (e) => setTask(e.target.value);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -153,16 +79,15 @@ function App() {
     try {
       const res = await fetch('http://127.0.0.1:5001/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
       });
       if (res.ok) {
         const data = await res.json();
-        setResponse(data.choices[0].message.content);
+        setResponse(data.choices[0]?.message?.content || 'No response');
+        interpretLLMResponse(data.choices[0]?.message?.content || '');
       } else {
-        setResponse('Error: Could not fetch response from the API.');
+        setResponse('Error: Could not fetch response from API.');
       }
     } catch (error) {
       setResponse('Error: Could not connect to the backend.');
@@ -171,15 +96,54 @@ function App() {
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+  const handleFileUpload = async (e) => {
+    e.preventDefault();
+    if (!file) return alert('Please select a file.');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('task', task); // Add task type to formData
+
+    try {
+      const res = await fetch('http://127.0.0.1:5001/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUploadResponse({
+          message: "File uploaded and processed successfully!",
+          variant: "success",
+        });
+        setExtractedData(data.extractedText || "No extraction result available.");
+      } else {
+        setUploadResponse({
+          message: 'Error: Could not process the file.',
+          variant: "danger",
+        });
+      }
+    } catch (error) {
+      setUploadResponse({
+        message: 'Error: Could not upload the file.',
+        variant: "danger",
+      });
+    }
   };
+
+  const interpretLLMResponse = (text) => {
+    // Basic LLM output interpretation (example: sentiment & keyword extraction)
+    const sentiment = text.includes('great') || text.includes('good') ? 'Positive' : 'Neutral';
+    const keywords = text.split(' ').filter((word) => word.length > 5);
+    setInterpretation({ sentiment, keywords });
+  };
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
     <div className="App">
       {/* Sidebar */}
       <div className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <Sidebar /> {/* Sidebar for additional features */}
+        <Sidebar />
       </div>
 
       {/* Main Content Area */}
@@ -188,35 +152,94 @@ function App() {
           <BsList size={30} />
         </Button>
 
-        {/* Metrics Dashboard */}
-        <MetricsDashboard />
+        {/* Performance Metrics */}
+        <Container fluid>
+          <h2 className="text-center">LLM Dashboard</h2>
+          <Row>
+            <Col xs={12} lg={8}>
+              <Card className="mb-3">
+                <Card.Body>
+                  <Line data={performanceMetrics} options={chartOptions} />
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col xs={12} lg={4}>
+              <Card className="mb-3">
+                <Card.Body>
+                  <h5>Interpretation</h5>
+                  <p><strong>Sentiment:</strong> {interpretation.sentiment}</p>
+                  <p><strong>Keywords:</strong> {interpretation.keywords.join(', ') || 'None'}</p>
+                </Card.Body>
+              </Card>
+              <Card className="mb-3">
+                <Card.Body>
+                  <h5>Response Time</h5>
+                  <ProgressBar now={140} max={250} label="140ms" />
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
 
-        <header className="App-header">
-          <h1>Real-Time Chat with AI</h1>
+          {/* Chat Section */}
+          <Row>
+            <Col>
+              <Card className="mb-3">
+                <Card.Body>
+                  <h5>Real-Time Chat</h5>
+                  <form onSubmit={handleSubmit}>
+                    <input
+                      type="text"
+                      className="form-control mb-2"
+                      placeholder="Ask the AI"
+                      value={message}
+                      onChange={handleInputChange}
+                    />
+                    <Button type="submit" disabled={!message.trim()} variant="primary">
+                      Send
+                    </Button>
+                  </form>
+                  <div className="mt-3">
+                    <p><strong>You:</strong> {message}</p>
+                    {isTyping && <p>AI is typing...</p>}
+                    <p><strong>AI:</strong> {response}</p>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
 
-          {/* Chat Input */}
-          <form onSubmit={handleSubmit}>
-            <input
-              type="text"
-              placeholder="Enter your message"
-              value={message}
-              onChange={handleInputChange}
-            />
-            <button type="submit" disabled={!message.trim()}>Send</button>
-          </form>
-
-          {/* Speech Recognition Button */}
-          <button onClick={startListening}>
-            {isTyping ? 'Listening...' : 'Speak to AI'}
-          </button>
-
-          {/* Chat Responses */}
-          <div className="chat-container">
-            <div><strong>You:</strong> {message}</div>
-            {isTyping && <div><strong>AI is typing...</strong></div>}
-            <div><strong>AI:</strong> {response}</div>
-          </div>
-        </header>
+          {/* File Upload Section */}
+          <Row>
+            <Col>
+              <Card className="mb-3">
+                <Card.Body>
+                  <h5>File Upload</h5>
+                  <Form onSubmit={handleFileUpload}>
+                    <input type="file" className="form-control mb-2" onChange={handleFileChange} />
+                    <Form.Control as="select" value={task} onChange={handleTaskChange} className="mb-2">
+                      <option value="summarization">Summarization</option>
+                      <option value="text-extraction">Text Extraction</option>
+                      <option value="keyword-recognition">Keyword Recognition</option>
+                      <option value="table-extraction">Table Extraction</option>
+                    </Form.Control>
+                    <Button type="submit" disabled={!file} variant="success">
+                      Upload
+                    </Button>
+                  </Form>
+                  <div className="mt-3">
+                    {uploadResponse.message && (
+                      <Alert variant={uploadResponse.variant}>
+                        {uploadResponse.message}
+                      </Alert>
+                    )}
+                    <h6>Extracted or Summarized Data:</h6>
+                    <pre>{extractedData}</pre>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
       </div>
     </div>
   );
