@@ -23,7 +23,7 @@ function AIChat({ files }) {
     try {
       const response = await axios.post('http://localhost:5001/api/chat', {
         message: input,
-        file_id: selectedFileId,
+        file_id: selectedFileId, // Send the file ID to the backend if selected
       });
 
       const aiMessage = { role: 'ai', content: response.data.choices[0].message.content };

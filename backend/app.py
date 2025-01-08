@@ -24,7 +24,7 @@ app.config['ALLOWED_EXTENSIONS'] = {'txt', 'pdf', 'docx', 'xlsx', 'json', 'csv'}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max file size 16MB
 
 # DeepSeek API Key (Replace with your actual API key)
-DEEPSEEK_API_KEY = ''
+DEEPSEEK_API_KEY = 'sk-7df095967fcd40fb9942443e2d9fadce'
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
