@@ -1,0 +1,92 @@
+/* AIChat.css */
+
+/* Container for the entire chat */
+.ai-chat-container {
+    background-color: #1a1a1a; /* Dark background for sci-fi theme */
+    color: white; /* White text for readability */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+    font-family: 'Roboto', sans-serif; /* Smooth, modern font */
+    position: absolute; /* Allow chat to be positioned anywhere */
+    top: 50px;
+    left: 50px;
+    transition: all 0.3s ease; /* Smooth transition when minimizing */
+    z-index: 1000;
+  }
+  
+  .ai-chat-container.minimized {
+    width: 200px; /* Reduced size when minimized */
+    height: 50px; /* Reduced height */
+    overflow: hidden; /* Hide content when minimized */
+  }
+  
+  .ai-chat-header {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #00e5ff; /* Neon blue for header to create contrast */
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  
+  .ai-minimize-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    color: #00e5ff;
+  }
+  
+  .ai-chat-messages-container {
+    max-height: 500px;
+    overflow-y: auto;
+    margin-bottom: 16px;
+    padding-right: 8px;
+  }
+  
+  /* Common style for both user and AI messages */
+  .ai-chat-message {
+    padding: 12px;
+    border-radius: 8px;
+    max-width: 75%;
+    font-size: 14px;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+    word-wrap: break-word;
+    margin: 8px 0;
+  }
+  
+  /* User's message style */
+  .ai-chat-message.user {
+    background-color: #00e5ff;
+    margin-left: auto;
+  }
+  
+  /* AI's message style */
+  .ai-chat-message.ai {
+    background-color: #333;
+  }
+  
+  .ai-chat-icons {
+    display: flex;
+    justify-content: space-between;
+  }
+  
+  .ai-chat-input-container {
+    display: flex;
+    margin-top: 16px;
+  }
+  
+  .ai-send-button {
+    margin-left: 8px;
+  }
+  
+  .ai-typing-indicator {
+    font-style: italic;
+    color: #00e5ff;
+    text-align: center;
+  }
+  
+  .ai-chat-container input[type='file'] {
+    display: none;
+  }

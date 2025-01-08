@@ -1,26 +1,31 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Paper, List, ListItem, ListItemText } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Box, TextField, Button, Typography, Paper, List, ListItem, ListItemText, Select, MenuItem, IconButton } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
-function AIChat() {
-  const [messages, setMessages] = useState([]); // Stores the chat history
-  const [input, setInput] = useState(''); // Stores the current user input
+function AIChat({ files }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [selectedFileId, setSelectedFileId] = useState('');
 
-  // Function to send a message to the AI
+  useEffect(() => {
+    if (files.length > 0) {
+      alert('New file received!');
+    }
+  }, [files]);
+
   const sendMessage = async () => {
-    if (!input.trim()) return; // Ignore empty messages
+    if (!input.trim()) return;
 
-    // Add the user's message to the chat history
     const userMessage = { role: 'user', content: input };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
 
     try {
-      // Send the message to the backend
       const response = await axios.post('http://localhost:5001/api/chat', {
         message: input,
+        file_id: selectedFileId,
       });
 
-      // Add the AI's response to the chat history
       const aiMessage = { role: 'ai', content: response.data.choices[0].message.content };
       setMessages((prevMessages) => [...prevMessages, aiMessage]);
     } catch (error) {
@@ -29,46 +34,53 @@ function AIChat() {
       setMessages((prevMessages) => [...prevMessages, errorMessage]);
     }
 
-    setInput(''); // Clear the input field
+    setInput('');
+  };
+
+  const deleteMessage = (index) => {
+    setMessages((prevMessages) => prevMessages.filter((_, i) => i !== index));
   };
 
   return (
-    <Box sx={{ maxWidth: '100%', height: '400px', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
-      <Typography variant="h6" sx={{ p: 2, borderBottom: '1px solid #ddd' }}>
-        AI Chat
-      </Typography>
-
-      {/* Chat Messages */}
-      <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+    <Box sx={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
+      <Typography variant="h6">AI Chat</Typography>
+      <Box>
+        <Select
+          value={selectedFileId}
+          onChange={(e) => setSelectedFileId(e.target.value)}
+          displayEmpty
+          fullWidth
+        >
+          <MenuItem value="" disabled>Select a file to analyze</MenuItem>
+          {files.map((file) => (
+            <MenuItem key={file.file_id} value={file.file_id}>
+              {file.filename}
+            </MenuItem>
+          ))}
+        </Select>
+      </Box>
+      <Box sx={{ flex: 1, overflowY: 'auto' }}>
         <List>
           {messages.map((msg, index) => (
             <ListItem key={index} sx={{ justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <Paper
-                sx={{
-                  p: 1.5,
-                  bgcolor: msg.role === 'user' ? '#e3f2fd' : '#f5f5f5',
-                  borderRadius: msg.role === 'user' ? '10px 10px 0 10px' : '10px 10px 10px 0',
-                }}
-              >
+              <Paper sx={{ p: 1.5 }}>
                 <ListItemText primary={msg.content} />
+                <IconButton onClick={() => deleteMessage(index)}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </Paper>
             </ListItem>
           ))}
         </List>
       </Box>
-
-      {/* Input Area */}
-      <Box sx={{ p: 2, borderTop: '1px solid #ddd', display: 'flex', gap: 1 }}>
+      <Box>
         <TextField
           fullWidth
           placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
         />
-        <Button variant="contained" onClick={sendMessage}>
-          Send
-        </Button>
+        <Button onClick={sendMessage}>Send</Button>
       </Box>
     </Box>
   );

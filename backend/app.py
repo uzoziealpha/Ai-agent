@@ -10,6 +10,8 @@ import json
 import csv
 import pandas as pd
 import logging
+from datetime import datetime
+import uuid
 
 # Initialize Flask app and enable CORS
 app = Flask(__name__)
@@ -21,12 +23,15 @@ app.config['UPLOAD_FOLDER'] = 'uploads/'
 app.config['ALLOWED_EXTENSIONS'] = {'txt', 'pdf', 'docx', 'xlsx', 'json', 'csv'}  # Allowed file types
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Max file size 16MB
 
-# DeepSeek API Key (Directly using the API key as provided)
+# DeepSeek API Key (Replace with your actual API key)
 DEEPSEEK_API_KEY = ''
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# In-memory storage for file metadata (replace with a database in production)
+file_metadata_store = []
 
 # Helper function to check allowed file extensions
 def allowed_file(filename):
@@ -93,25 +98,64 @@ def extract_text_from_json(file_path):
         logger.error(f"Error extracting data from JSON: {str(e)}")
         return None
 
+# Helper function to store uploaded file metadata
+def store_file_metadata(filename, file_type, upload_time, file_id):
+    """
+    Store metadata about the uploaded file.
+    """
+    file_metadata_store.append({
+        'file_id': file_id,
+        'filename': filename,
+        'file_type': file_type,
+        'upload_time': upload_time,
+    })
+    logger.info(f"Stored metadata for file: {filename}, ID: {file_id}, Type: {file_type}, Uploaded at: {upload_time}")
+
 # Endpoint for DeepSeek API interaction
 @app.route('/api/chat', methods=['POST'])
 def chat():
     """
     Endpoint to interact with DeepSeek API.
-    Expects a JSON payload with a 'message' key.
+    Expects a JSON payload with a 'message' key and 'file_id'.
     """
     try:
         user_input = request.json.get('message')
-        extracted_data = request.json.get('extracted_data')  # Get extracted data from frontend
+        file_id = request.json.get('file_id')  # Get file ID from frontend
 
         if not user_input:
             return jsonify({'error': 'No message provided'}), 400
 
+        # Find the file metadata using the file_id
+        file_metadata = next((file for file in file_metadata_store if file['file_id'] == file_id), None)
+        if not file_metadata:
+            return jsonify({'error': 'File not found'}), 404
+
+        # Load the file content based on the file type
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file_metadata['filename'])
+        file_content = None
+
+        if file_metadata['file_type'] == 'pdf':
+            file_content = extract_text_from_pdf(file_path)
+        elif file_metadata['file_type'] == 'docx':
+            file_content = extract_text_from_docx(file_path)
+        elif file_metadata['file_type'] == 'csv':
+            file_content = extract_text_from_csv(file_path)
+        elif file_metadata['file_type'] == 'xlsx':
+            file_content = extract_text_from_xlsx(file_path)
+        elif file_metadata['file_type'] == 'json':
+            file_content = extract_text_from_json(file_path)
+
+        if not file_content:
+            return jsonify({'error': 'Unable to extract data from the file'}), 400
+
         # Prepare data for AI
         payload = {
             'model': 'deepseek-chat',  # Adjust model based on DeepSeek documentation
-            'messages': [{'role': 'user', 'content': user_input}],
-            'extracted_data': extracted_data  # Send extracted file data
+            'messages': [
+                {'role': 'system', 'content': f'You are analyzing the file: {file_metadata["filename"]}'},
+                {'role': 'user', 'content': user_input},
+                {'role': 'assistant', 'content': f'File content: {str(file_content)}'},
+            ],
         }
 
         # DeepSeek API request
@@ -156,6 +200,9 @@ def upload_file():
         if not allowed_file(file.filename):
             return jsonify({'error': 'File type not allowed'}), 400
 
+        # Generate a unique ID for the file
+        file_id = str(uuid.uuid4())
+
         # Save file securely
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -177,15 +224,36 @@ def upload_file():
         if not extracted_data:
             return jsonify({'error': 'Unable to extract data from the file'}), 400
 
+        # Store file metadata
+        upload_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        file_type = filename.split('.')[-1]  # Extract file extension
+        store_file_metadata(filename, file_type, upload_time, file_id)
+
         return jsonify({
             'success': True,
             'message': 'File uploaded and processed successfully!',
+            'file_id': file_id,  # Return the unique file ID
+            'filename': filename,
+            'file_type': file_type,  # Return the file type
+            'upload_time': upload_time,  # Return the upload time
             'extracted_data': extracted_data  # Return processed data as JSON
         })
 
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+# Endpoint to fetch file metadata
+@app.route('/api/files', methods=['GET'])
+def get_files():
+    """
+    Endpoint to fetch metadata for all uploaded files.
+    """
+    try:
+        return jsonify({'success': True, 'files': file_metadata_store})
+    except Exception as e:
+        logger.error(f"Error fetching file metadata: {str(e)}")
+        return jsonify({'error': 'Failed to fetch file metadata'}), 500
 
 # Ensure upload folder exists and start the app
 if __name__ == '__main__':
